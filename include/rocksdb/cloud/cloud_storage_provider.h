@@ -54,6 +54,7 @@ class CloudStorageProvider : public Configurable {
   static Status CreateFromString(
       const ConfigOptions& config_options, const std::string& id,
       std::shared_ptr<CloudStorageProvider>* provider);
+  static const char* kAws() { return "s3"; }
 
   // Returns name of the cloud storage provider type (e.g., S3)
   virtual const char* Name() const = 0;

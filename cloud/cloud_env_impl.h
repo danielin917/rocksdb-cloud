@@ -32,6 +32,8 @@ class CloudEnvImpl : public CloudEnv {
   static const char *kClassName() { return kCloud(); }
   virtual const char* Name() const override { return kClassName(); }
   
+  const CloudType& GetCloudType() const { return cloud_env_options.cloud_type; }
+
   Status NewSequentialFile(const std::string& fname,
                            std::unique_ptr<SequentialFile>* result,
                            const EnvOptions& options) override;
@@ -248,7 +250,6 @@ class CloudEnvImpl : public CloudEnv {
     std::lock_guard<std::mutex> lk(files_to_delete_mutex_);
     file_deletion_delay_ = delay;
   }
-
 
   Status PrepareOptions(const ConfigOptions& config_options) override;
   Status ValidateOptions(const DBOptions& /*db_opts*/,
