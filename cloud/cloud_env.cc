@@ -115,11 +115,12 @@ void BucketOptions::TEST_Initialize(const std::string& bucket,
     region_ = region;
   }
 }
+
 static std::unordered_map<std::string, OptionTypeInfo>
     bucket_options_type_info = {
         {"object",
-         {0, OptionType::kString,
-          OptionVerificationType::kNormal, OptionTypeFlags::kCompareNever,
+         {0, OptionType::kString, OptionVerificationType::kNormal,
+          OptionTypeFlags::kCompareNever,
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
              const std::string& value, char* addr) {
             auto bucket = reinterpret_cast<BucketOptions*>(addr);
@@ -139,8 +140,8 @@ static std::unordered_map<std::string, OptionTypeInfo>
             return bucket1->GetObjectPath() == bucket2->GetObjectPath();
           }}},
         {"region",
-         {0, OptionType::kString,
-          OptionVerificationType::kNormal, OptionTypeFlags::kCompareNever,
+         {0, OptionType::kString, OptionVerificationType::kNormal,
+          OptionTypeFlags::kCompareNever,
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
              const std::string& value, char* addr) {
             auto bucket = reinterpret_cast<BucketOptions*>(addr);
@@ -160,8 +161,8 @@ static std::unordered_map<std::string, OptionTypeInfo>
             return bucket1->GetRegion() == bucket2->GetRegion();
           }}},
         {"prefix",
-         {0, OptionType::kString,
-          OptionVerificationType::kNormal, OptionTypeFlags::kNone,
+         {0, OptionType::kString, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone,
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
              const std::string& value, char* addr) {
             auto bucket = reinterpret_cast<BucketOptions*>(addr);
@@ -181,8 +182,8 @@ static std::unordered_map<std::string, OptionTypeInfo>
             return bucket1->GetBucketPrefix() == bucket2->GetBucketPrefix();
           }}},
         {"bucket",
-         {0, OptionType::kString,
-          OptionVerificationType::kNormal, OptionTypeFlags::kNone,
+         {0, OptionType::kString, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone,
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
              const std::string& value, char* addr) {
             auto bucket = reinterpret_cast<BucketOptions*>(addr);
@@ -201,6 +202,28 @@ static std::unordered_map<std::string, OptionTypeInfo>
             auto bucket2 = reinterpret_cast<const BucketOptions*>(addr2);
             return bucket1->GetBucketName(false) == bucket2->GetBucketName(false);
           }}},
+        {"TEST",
+         {0, OptionType::kUnknown, OptionVerificationType::kAlias,
+          OptionTypeFlags::kNone,
+          [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
+             const std::string& value, char* addr) {
+            auto bucket = reinterpret_cast<BucketOptions*>(addr);
+            std::string name = value;
+            std::string path;
+            std::string region;
+            auto pos = name.find(":");
+            if (pos != std::string::npos) {
+              path = name.substr(pos + 1);
+              name = name.substr(0, pos);
+            }
+            pos = path.find("?");
+            if (pos != std::string::npos) {
+              region = path.substr(pos + 1);
+              path = path.substr(0, pos);
+            }
+            bucket->TEST_Initialize(name, path, region);
+            return Status::OK();
+          }}},
 };
 
 static CloudEnvOptions dummy_ceo_options;
@@ -209,30 +232,39 @@ int offset_of(T1 CloudEnvOptions::*member) {
   return int(size_t(&(dummy_ceo_options.*member)) - size_t(&dummy_ceo_options));
 }
 
-  
 static std::unordered_map<std::string, OptionTypeInfo>
     cloud_env_option_type_info = {
         {"keep_local_sst_files",
-         {offset_of(&CloudEnvOptions::keep_local_sst_files), OptionType::kBoolean}},
+         {offset_of(&CloudEnvOptions::keep_local_sst_files),
+          OptionType::kBoolean}},
         {"keep_local_log_files",
-         {offset_of(&CloudEnvOptions::keep_local_log_files), OptionType::kBoolean}},
+         {offset_of(&CloudEnvOptions::keep_local_log_files),
+          OptionType::kBoolean}},
         {"create_bucket_if_missing",
-         {offset_of(&CloudEnvOptions::create_bucket_if_missing), OptionType::kBoolean}},
+         {offset_of(&CloudEnvOptions::create_bucket_if_missing),
+          OptionType::kBoolean}},
         {"validate_filesize",
-         {offset_of(&CloudEnvOptions::validate_filesize), OptionType::kBoolean}},
+         {offset_of(&CloudEnvOptions::validate_filesize),
+          OptionType::kBoolean}},
         {"skip_dbid_verification",
-         {offset_of(&CloudEnvOptions::skip_dbid_verification), OptionType::kBoolean}},
+         {offset_of(&CloudEnvOptions::skip_dbid_verification),
+          OptionType::kBoolean}},
         {"ephemeral_resync_on_open",
-         {offset_of(&CloudEnvOptions::ephemeral_resync_on_open), OptionType::kBoolean}},
+         {offset_of(&CloudEnvOptions::ephemeral_resync_on_open),
+          OptionType::kBoolean}},
         {"skip_cloud_children_files",
-         {offset_of(&CloudEnvOptions::skip_cloud_files_in_getchildren), OptionType::kBoolean}},
+         {offset_of(&CloudEnvOptions::skip_cloud_files_in_getchildren),
+          OptionType::kBoolean}},
         {"constant_sst_file_size_in_manager",
-         {offset_of(&CloudEnvOptions::constant_sst_file_size_in_sst_file_manager), OptionType::kInt64T}},
+         {offset_of(
+              &CloudEnvOptions::constant_sst_file_size_in_sst_file_manager),
+          OptionType::kInt64T}},
         {"run_purger",
          {offset_of(&CloudEnvOptions::run_purger), OptionType::kBoolean}},
         {"purger_periodicity_ms",
-         {offset_of(&CloudEnvOptions::purger_periodicity_millis), OptionType::kUInt64T}},
-        
+         {offset_of(&CloudEnvOptions::purger_periodicity_millis),
+          OptionType::kUInt64T}},
+
         {"provider",
          {offset_of(&CloudEnvOptions::storage_provider),
           OptionType::kConfigurable, OptionVerificationType::kByNameAllowNull,
@@ -255,23 +287,43 @@ static std::unordered_map<std::string, OptionTypeInfo>
              const std::string& value, char* addr) {
             auto controller =
                 reinterpret_cast<std::shared_ptr<CloudLogController>*>(addr);
-            return CloudLogController::CreateFromString(opts, value,
-                                                        controller);
+            Status s =
+                CloudLogController::CreateFromString(opts, value, controller);
+            return s;
           }}},
-        {"src",
-         OptionTypeInfo::Struct("src",
-                                &bucket_options_type_info, 
-                                offset_of(&CloudEnvOptions::src_bucket),
-                                OptionVerificationType::kNormal, OptionTypeFlags::kNone)
-        },
-        {"dest",
-         OptionTypeInfo::Struct("dest",
-                                &bucket_options_type_info, 
-                                offset_of(&CloudEnvOptions::dest_bucket),
-                                OptionVerificationType::kNormal, OptionTypeFlags::kNone)
-        },
+        {"src", OptionTypeInfo::Struct("src", &bucket_options_type_info,
+                                       offset_of(&CloudEnvOptions::src_bucket),
+                                       OptionVerificationType::kNormal,
+                                       OptionTypeFlags::kNone)},
+        {"dest", OptionTypeInfo::Struct(
+                     "dest", &bucket_options_type_info,
+                     offset_of(&CloudEnvOptions::dest_bucket),
+                     OptionVerificationType::kNormal, OptionTypeFlags::kNone)},
+        {"TEST",
+         {0, OptionType::kUnknown, OptionVerificationType::kAlias,
+          OptionTypeFlags::kNone,
+          [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
+             const std::string& value, char* addr) {
+            auto copts = reinterpret_cast<CloudEnvOptions*>(addr);
+            std::string name;
+            std::string path;
+            std::string region;
+            auto pos = value.find(":");
+            if (pos != std::string::npos) {
+              name = value.substr(0, pos);
+              path = value.substr(pos + 1);
+            }
+            pos = path.find("?");
+            if (pos != std::string::npos) {
+              region = path.substr(pos + 1);
+              path = path.substr(0, pos);
+            }
+            copts->src_bucket.TEST_Initialize(name, path, region);
+            copts->dest_bucket.TEST_Initialize(name, path, region);
+            return Status::OK();
+          }}},
 };
-  
+
 Status CloudEnvOptions::Configure(const ConfigOptions& config_options,
                                   const std::string& opts_str) {
   std::string current;
