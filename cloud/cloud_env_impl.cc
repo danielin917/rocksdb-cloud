@@ -24,9 +24,8 @@
 
 namespace ROCKSDB_NAMESPACE {
 
-CloudEnvImpl::CloudEnvImpl(const CloudEnvOptions& opts, Env* base,
-                           const std::shared_ptr<Logger>& l)
-    : CloudEnv(opts, base, l), purger_is_running_(true) {
+CloudEnvImpl::CloudEnvImpl(const CloudEnvOptions& opts, Env* base)
+    : CloudEnv(opts, base), purger_is_running_(true) {
   scheduler_ = CloudScheduler::Get();
 }
 
@@ -110,7 +109,7 @@ Status CloudEnvImpl::ListCloudObjects(const std::string& path,
     st = GetStorageProvider()->ListCloudObjects(GetSrcBucketName(),
                                                 GetSrcObjectPath(), result);
     if (!st.ok()) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[%s] GetChildren src bucket %s %s error from %s %s", Name(),
           GetSrcBucketName().c_str(), path.c_str(),
           GetStorageProvider()->Name(), st.ToString().c_str());
@@ -121,7 +120,7 @@ Status CloudEnvImpl::ListCloudObjects(const std::string& path,
     st = GetStorageProvider()->ListCloudObjects(GetDestBucketName(),
                                                 GetDestObjectPath(), result);
     if (!st.ok()) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[%s] GetChildren dest bucket %s %s error from %s %s", Name(),
           GetDestBucketName().c_str(), path.c_str(),
           GetStorageProvider()->Name(), st.ToString().c_str());
@@ -185,9 +184,7 @@ Status CloudEnvImpl::NewSequentialFile(const std::string& logical_fname,
         result->reset(file.release());
       }
     }
-    // Do not update the sst_file_cache for sequential read patterns.
-    // These are mostly used by compaction.
-    Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+    Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
         "[%s] NewSequentialFile file %s %s", Name(), fname.c_str(),
         st.ToString().c_str());
     return st;
@@ -295,7 +292,7 @@ Status CloudEnvImpl::NewRandomAccessFile(
                             fname + " local size " +
                             std::to_string(local_size) + " cloud size " +
                             std::to_string(remote_size) + " " + stax.ToString();
-          Log(InfoLogLevel::ERROR_LEVEL, info_log_, "%s", msg.c_str());
+          Log(InfoLogLevel::ERROR_LEVEL, GetLogger(), "%s", msg.c_str());
           return Status::IOError(msg);
         }
       }
@@ -307,7 +304,7 @@ Status CloudEnvImpl::NewRandomAccessFile(
         result->reset(file.release());
       }
     }
-    Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+    Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
         "[%s] NewRandomAccessFile file %s %s", Name(), fname.c_str(),
         st.ToString().c_str());
     return st;
@@ -344,7 +341,7 @@ Status CloudEnvImpl::NewWritableFile(const std::string& logical_fname,
                                                destname(fname), &f, options);
     s = f->status();
     if (!s.ok()) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[%s] NewWritableFile src %s %s", Name(), fname.c_str(),
           s.ToString().c_str());
       return s;
@@ -357,7 +354,7 @@ Status CloudEnvImpl::NewWritableFile(const std::string& logical_fname,
     if (!f || !f->status().ok()) {
       std::string msg = std::string("[") + Name() + "] NewWritableFile";
       s = Status::IOError(msg, fname.c_str());
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_, "%s src %s %s", msg.c_str(),
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(), "%s src %s %s", msg.c_str(),
           fname.c_str(), s.ToString().c_str());
       return s;
     }
@@ -365,7 +362,7 @@ Status CloudEnvImpl::NewWritableFile(const std::string& logical_fname,
   } else {
     s = base_env_->NewWritableFile(fname, result, options);
   }
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] NewWritableFile src %s %s",
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "[%s] NewWritableFile src %s %s",
       Name(), fname.c_str(), s.ToString().c_str());
   return s;
 }
@@ -405,14 +402,14 @@ Status CloudEnvImpl::FileExists(const std::string& logical_fname) {
   } else {
     st = base_env_->FileExists(fname);
   }
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] FileExists path '%s' %s",
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "[%s] FileExists path '%s' %s",
       Name(), fname.c_str(), st.ToString().c_str());
   return st;
 }
 
 Status CloudEnvImpl::GetChildren(const std::string& path,
                                  std::vector<std::string>* result) {
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] GetChildren path '%s' ",
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "[%s] GetChildren path '%s' ",
       Name(), path.c_str());
   result->clear();
 
@@ -429,7 +426,7 @@ Status CloudEnvImpl::GetChildren(const std::string& path,
   std::vector<std::string> local_files;
   st = base_env_->GetChildren(path, &local_files);
   if (!st.ok()) {
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[%s] GetChildren %s error on local dir", Name(), path.c_str());
     return st;
   }
@@ -461,7 +458,7 @@ Status CloudEnvImpl::GetChildren(const std::string& path,
   std::sort(result->begin(), result->end());
   result->erase(std::unique(result->begin(), result->end()), result->end());
 
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
       "[%s] GetChildren %s successfully returned %" ROCKSDB_PRIszt " files",
       Name(), path.c_str(), result->size());
   return Status::OK();
@@ -488,7 +485,7 @@ Status CloudEnvImpl::GetFileSize(const std::string& logical_fname,
   } else {
     st = base_env_->GetFileSize(fname, size);
   }
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
       "[%s] GetFileSize src '%s' %s %" PRIu64, Name(), fname.c_str(),
       st.ToString().c_str(), *size);
   return st;
@@ -516,7 +513,7 @@ Status CloudEnvImpl::GetFileModificationTime(const std::string& logical_fname,
   } else {
     st = base_env_->GetFileModificationTime(fname, time);
   }
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
       "[%s] GetFileModificationTime src '%s' %s", Name(), fname.c_str(),
       st.ToString().c_str());
   return st;
@@ -537,21 +534,21 @@ Status CloudEnvImpl::RenameFile(const std::string& logical_src,
 
   // Rename should never be called on sst files.
   if (sstfile) {
-    Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+    Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
         "[%s] RenameFile source sstfile %s %s is not supported", Name(),
         src.c_str(), target.c_str());
     assert(0);
     return Status::NotSupported(Slice(src), Slice(target));
   } else if (logfile) {
     // Rename should never be called on log files as well
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[%s] RenameFile source logfile %s %s is not supported", Name(),
         src.c_str(), target.c_str());
     assert(0);
     return Status::NotSupported(Slice(src), Slice(target));
   } else if (manifest) {
     // Rename should never be called on manifest files as well
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[%s] RenameFile source manifest %s %s is not supported", Name(),
         src.c_str(), target.c_str());
     assert(0);
@@ -572,7 +569,7 @@ Status CloudEnvImpl::RenameFile(const std::string& logical_src,
   if (st.ok()) {
     st = base_env_->RenameFile(src, target);
   }
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
       "[%s] RenameFile src %s target %s: %s", Name(), src.c_str(),
       target.c_str(), st.ToString().c_str());
   return st;
@@ -620,7 +617,7 @@ Status CloudEnvImpl::NewDirectory(const std::string& name,
                                   std::unique_ptr<Directory>* result) {
   result->reset(nullptr);
 
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] NewDirectory name '%s'",
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "[%s] NewDirectory name '%s'",
       Name(), name.c_str());
 
   // create new object.
@@ -628,13 +625,13 @@ Status CloudEnvImpl::NewDirectory(const std::string& name,
 
   // Check if the path exists in local dir
   if (!d->status().ok()) {
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[%s] NewDirectory name %s unable to create local dir", Name(),
         name.c_str());
     return d->status();
   }
   result->reset(d.release());
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] NewDirectory name %s ok",
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "[%s] NewDirectory name %s ok",
       Name(), name.c_str());
   return Status::OK();
 }
@@ -642,29 +639,29 @@ Status CloudEnvImpl::NewDirectory(const std::string& name,
 // Cloud storage providers have no concepts of directories,
 // so we just have to forward the request to the base_env_
 Status CloudEnvImpl::CreateDir(const std::string& dirname) {
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] CreateDir dir '%s'", Name(),
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "[%s] CreateDir dir '%s'", Name(),
       dirname.c_str());
   Status st;
 
   // create local dir
   st = base_env_->CreateDir(dirname);
 
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] CreateDir dir %s %s", Name(),
-      dirname.c_str(), st.ToString().c_str());
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "[%s] CreateDir dir %s %s",
+      Name(), dirname.c_str(), st.ToString().c_str());
   return st;
 };
 
 // Cloud storage providers have no concepts of directories,
 // so we just have to forward the request to the base_env_
 Status CloudEnvImpl::CreateDirIfMissing(const std::string& dirname) {
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] CreateDirIfMissing dir '%s'",
-      Name(), dirname.c_str());
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
+      "[%s] CreateDirIfMissing dir '%s'", Name(), dirname.c_str());
   Status st;
 
   // create directory in base_env_
   st = base_env_->CreateDirIfMissing(dirname);
 
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
       "[%s] CreateDirIfMissing created dir %s %s", Name(), dirname.c_str(),
       st.ToString().c_str());
   return st;
@@ -673,11 +670,11 @@ Status CloudEnvImpl::CreateDirIfMissing(const std::string& dirname) {
 // Cloud storage providers have no concepts of directories,
 // so we just have to forward the request to the base_env_
 Status CloudEnvImpl::DeleteDir(const std::string& dirname) {
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] DeleteDir src '%s'", Name(),
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "[%s] DeleteDir src '%s'", Name(),
       dirname.c_str());
   Status st = base_env_->DeleteDir(dirname);
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] DeleteDir dir %s %s", Name(),
-      dirname.c_str(), st.ToString().c_str());
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "[%s] DeleteDir dir %s %s",
+      Name(), dirname.c_str(), st.ToString().c_str());
   return st;
 };
 
@@ -750,7 +747,7 @@ Status CloudEnvImpl::DeleteFile(const std::string& logical_fname) {
   } else {
     st = base_env_->DeleteFile(fname);
   }
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] DeleteFile file %s %s",
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "[%s] DeleteFile file %s %s",
       Name(), fname.c_str(), st.ToString().c_str());
   return st;
 }
@@ -790,7 +787,7 @@ Status CloudEnvImpl::DeleteCloudFileFromDest(const std::string& fname) {
     auto st =
         GetStorageProvider()->DeleteCloudObject(GetDestBucketName(), path);
     if (!st.ok() && !st.IsNotFound()) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[%s] DeleteFile file %s error %s", Name(), path.c_str(),
           st.ToString().c_str());
     }
@@ -924,7 +921,7 @@ Status CloudEnvImpl::DeleteInvisibleFiles(const std::string& dbname) {
       if (IsSstFile(noepoch) || IsManifestFile(noepoch)) {
         if (RemapFilename(noepoch) != fname) {
           // Ignore returned status on purpose.
-          Log(InfoLogLevel::INFO_LEVEL, info_log_,
+          Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
               "DeleteInvisibleFiles deleting %s from destination bucket",
               fname.c_str());
           DeleteCloudFileFromDest(fname);
@@ -942,7 +939,7 @@ Status CloudEnvImpl::DeleteInvisibleFiles(const std::string& dbname) {
     if (IsSstFile(noepoch) || IsManifestFile(noepoch)) {
       if (RemapFilename(RemoveEpoch(fname)) != fname) {
         // Ignore returned status on purpose.
-        Log(InfoLogLevel::INFO_LEVEL, info_log_,
+        Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
             "DeleteInvisibleFiles deleting file %s from local dir",
             fname.c_str());
         GetBaseEnv()->DeleteFile(dbname + "/" + fname);
@@ -966,28 +963,28 @@ Status CloudEnvImpl::CreateNewIdentityFile(const std::string& dbid,
     std::unique_ptr<WritableFile> destfile;
     st = env->NewWritableFile(tmp_identity_path, &destfile, soptions);
     if (!st.ok()) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[cloud_env_impl] Unable to create local IDENTITY file to %s %s",
           tmp_identity_path.c_str(), st.ToString().c_str());
       return st;
     }
     st = destfile->Append(Slice(dbid));
     if (!st.ok()) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[cloud_env_impl] Unable to write new dbid to local IDENTITY file "
           "%s %s",
           tmp_identity_path.c_str(), st.ToString().c_str());
       return st;
     }
   }
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
       "[cloud_env_impl] Written new dbid %s to %s %s", dbid.c_str(),
       tmp_identity_path.c_str(), st.ToString().c_str());
 
   // Rename ID file on local filesystem and upload it to dest bucket too
   st = RenameFile(tmp_identity_path, local_name + "/IDENTITY");
   if (!st.ok()) {
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[cloud_env_impl] Unable to rename newly created IDENTITY.tmp "
         " to IDENTITY. %s",
         st.ToString().c_str());
@@ -1069,7 +1066,7 @@ std::string CloudEnvImpl::destname(const std::string& localname) {
 //
 Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
                                            bool* do_reinit) {
-  Log(InfoLogLevel::INFO_LEVEL, info_log_,
+  Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
       "[cloud_env_impl] NeedsReinitialization: "
       "checking local dir %s src bucket %s src path %s "
       "dest bucket %s dest path %s",
@@ -1078,7 +1075,7 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
 
   // If no buckets are specified, then we cannot reinit anyways
   if (!HasSrcBucket() && !HasDestBucket()) {
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "Both src and dest buckets are empty");
     *do_reinit = false;
@@ -1094,7 +1091,7 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
   // Check if local directory exists
   auto st = env->FileExists(local_dir);
   if (!st.ok()) {
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "failed to access local dir %s: %s",
         local_dir.c_str(), st.ToString().c_str());
@@ -1106,7 +1103,7 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
   // Check if CURRENT file exists
   st = env->FileExists(CurrentFileName(local_dir));
   if (!st.ok()) {
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "failed to find CURRENT file %s: %s",
         CurrentFileName(local_dir).c_str(), st.ToString().c_str());
@@ -1122,7 +1119,7 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
   std::string local_dbid;
   st = ReadFileToString(env, IdentityFileName(local_dir), &local_dbid);
   if (!st.ok()) {
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "local dir %s unable to read local dbid: %s",
         local_dir.c_str(), st.ToString().c_str());
@@ -1141,13 +1138,13 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
     st = GetPathForDbid(src_bucket, local_dbid, &src_object_path);
     if (!st.ok() && !st.IsNotFound()) {
       // Unable to fetch data from provider Fail Open request.
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[cloud_env_impl] NeedsReinitialization: "
           "Local dbid is %s but unable to find src dbid",
           local_dbid.c_str());
       return st;
     }
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "Local dbid is %s and src object path in registry is '%s'",
         local_dbid.c_str(), src_object_path.c_str());
@@ -1155,7 +1152,7 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
     if (st.ok()) {
       src_object_path = rtrim_if(trim(src_object_path), '/');
     }
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "Local dbid %s configured src path %s src dbid registry",
         local_dbid.c_str(), src_object_path.c_str());
@@ -1167,13 +1164,13 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
     st = GetPathForDbid(dest_bucket, local_dbid, &dest_object_path);
     if (!st.ok() && !st.IsNotFound()) {
       // Unable to fetch data from provider Fail Open request.
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[cloud_env_impl] NeedsReinitialization: "
           "Local dbid is %s but unable to find dest dbid",
           local_dbid.c_str());
       return st;
     }
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "Local dbid is %s and dest object path in registry is '%s'",
         local_dbid.c_str(), dest_object_path.c_str());
@@ -1186,7 +1183,7 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
       // If the registered dest path does not match the one specified in
       // our env, then fail the OpenDB request.
       if (dest_object_path != dest_specified_path) {
-        Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+        Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
             "[cloud_env_impl] NeedsReinitialization: "
             "Local dbid %s dest path specified in env is %s "
             " but dest path in registry is %s",
@@ -1196,7 +1193,7 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
             "[cloud_env_impl] NeedsReinitialization: bad dest path");
       }
     }
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "Local dbid %s configured path %s matches the dest dbid registry",
         local_dbid.c_str(), dest_object_path.c_str());
@@ -1208,7 +1205,7 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
   std::string dest_dbid;
   st = GetCloudDbid(local_dir, &src_dbid, &dest_dbid);
   if (!st.ok()) {
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "Unable to extract dbid from cloud paths %s",
         st.ToString().c_str());
@@ -1219,13 +1216,13 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
   if (!src_dbid.empty()) {
     size_t pos = local_dbid.find(src_dbid);
     if (pos == std::string::npos) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[cloud_env_impl] NeedsReinitialization: "
           "dbid %s in src bucket %s is not a prefix of local dbid %s",
           src_dbid.c_str(), src_bucket.c_str(), local_dbid.c_str());
       return Status::OK();
     }
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "dbid %s in src bucket %s is a prefix of local dbid %s",
         src_dbid.c_str(), src_bucket.c_str(), local_dbid.c_str());
@@ -1233,13 +1230,13 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
     // If the local dbid is an exact match with the src dbid, then ensure
     // that we cannot run in a 'clone' mode.
     if (local_dbid == src_dbid) {
-      Log(InfoLogLevel::INFO_LEVEL, info_log_,
+      Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
           "[cloud_env_impl] NeedsReinitialization: "
           "dbid %s in src bucket %s is same as local dbid",
           src_dbid.c_str(), src_bucket.c_str());
 
       if (HasDestBucket() && !SrcMatchesDest()) {
-        Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+        Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
             "[cloud_env_impl] NeedsReinitialization: "
             "local dbid %s in same as src dbid but clone mode specified",
             local_dbid.c_str());
@@ -1252,13 +1249,13 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
   if (!dest_dbid.empty()) {
     size_t pos = local_dbid.find(dest_dbid);
     if (pos == std::string::npos) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[cloud_env_impl] NeedsReinitialization: "
           "dbid %s in dest bucket %s is not a prefix of local dbid %s",
           dest_dbid.c_str(), dest_bucket.c_str(), local_dbid.c_str());
       return Status::OK();
     }
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "dbid %s in dest bucket %s is a prefix of local dbid %s",
         dest_dbid.c_str(), dest_bucket.c_str(), local_dbid.c_str());
@@ -1266,13 +1263,13 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
     // If the local dbid is an exact match with the destination dbid, then
     // ensure that we are run not in a 'clone' mode.
     if (local_dbid == dest_dbid) {
-      Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+      Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
           "[cloud_env_impl] NeedsReinitialization: "
           "dbid %s in dest bucket %s is same as local dbid",
           dest_dbid.c_str(), dest_bucket.c_str());
 
       if (HasSrcBucket() && !SrcMatchesDest()) {
-        Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+        Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
             "[cloud_env_impl] NeedsReinitialization: "
             "local dbid %s in same as dest dbid but clone mode specified",
             local_dbid.c_str());
@@ -1284,7 +1281,7 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
   // We found a local dbid but we did not find this dbid in bucket registry.
   // This is an ephemeral clone.
   if (src_object_path.empty() && dest_object_path.empty()) {
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[cloud_env_impl] NeedsReinitialization: "
         "local dbid %s does not have a mapping in cloud registry "
         "src bucket %s or dest bucket %s",
@@ -1307,7 +1304,7 @@ Status CloudEnvImpl::NeedsReinitialization(const std::string& local_dir,
       Status local_manifest_exists =
           base_env->FileExists(ManifestFileWithEpoch(local_dir, current_epoch));
       if (!local_manifest_exists.ok()) {
-        Log(InfoLogLevel::WARN_LEVEL, info_log_,
+        Log(InfoLogLevel::WARN_LEVEL, GetLogger(),
             "[cloud_env_impl] NeedsReinitialization: CLOUDMANIFEST exists "
             "locally, but no local MANIFEST is compatible");
         return Status::OK();
@@ -1340,7 +1337,7 @@ Status CloudEnvImpl::ResyncDir(const std::string& local_dir) {
   if (HasDestBucket()) {
     auto& src_bucket = GetSrcBucketName();
     auto& dest_bucket = GetDestBucketName();
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[cloud_env_impl] ResyncDir: "
         "not an ephemeral clone local dir %s "
         "src bucket %s dest bucket %s",
@@ -1388,7 +1385,7 @@ Status CloudEnvImpl::GetCloudDbid(const std::string& local_dir,
         src_dbid->assign(rtrim_if(trim(sid), '\n'));
         env->DeleteFile(tmpfile);
       } else {
-        Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+        Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
             "[cloud_env_impl] GetCloudDbid: "
             "local dir %s unable to read src dbid: %s",
             local_dir.c_str(), st.ToString().c_str());
@@ -1411,7 +1408,7 @@ Status CloudEnvImpl::GetCloudDbid(const std::string& local_dir,
         dest_dbid->assign(rtrim_if(trim(sid), '\n'));
         env->DeleteFile(tmpfile);
       } else {
-        Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+        Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
             "[cloud_env_impl] GetCloudDbid: "
             "local dir %s unable to read dest dbid: %s",
             local_dir.c_str(), st.ToString().c_str());
@@ -1428,7 +1425,7 @@ Status CloudEnvImpl::MaybeMigrateManifestFile(const std::string& local_dbname) {
   auto st = local_env->FileExists(CurrentFileName(local_dbname));
   if (st.IsNotFound()) {
     // No need to migrate
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] MaybeMigrateManifestFile: No need to migrate %s",
         CurrentFileName(local_dbname).c_str());
     return Status::OK();
@@ -1450,7 +1447,7 @@ Status CloudEnvImpl::MaybeMigrateManifestFile(const std::string& local_dbname) {
   manifest_filename = local_dbname + "/" + rtrim_if(manifest_filename, '\n');
   if (local_env->FileExists(manifest_filename).IsNotFound()) {
     // manifest doesn't exist, shrug
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] MaybeMigrateManifestFile: Manifest %s does not exist",
         manifest_filename.c_str());
     return Status::OK();
@@ -1493,14 +1490,13 @@ Status CloudEnvImpl::LoadCloudManifest(const std::string& local_dbname,
   if (!st.ok()) {
     return st;
   }
-  
   // Do the cleanup, but don't fail if the cleanup fails.
   if (!read_only) {
     st = DeleteInvisibleFiles(local_dbname);
     if (!st.ok()) {
-      Log(InfoLogLevel::INFO_LEVEL, info_log_,
+      Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
           "Failed to delete invisible files: %s", st.ToString().c_str());
-        // Ignore the fail
+      // Ignore the fail
       st = Status::OK();
     }
   }
@@ -1532,7 +1528,7 @@ Status CloudEnvImpl::SanitizeDirectory(const DBOptions& options,
   bool do_reinit = true;
   Status st = NeedsReinitialization(local_name, &do_reinit);
   if (!st.ok()) {
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[cloud_env_impl] SanitizeDirectory error inspecting dir %s %s",
         local_name.c_str(), st.ToString().c_str());
     return st;
@@ -1543,7 +1539,7 @@ Status CloudEnvImpl::SanitizeDirectory(const DBOptions& options,
   // = -1
   if (!HasDestBucket()) {
     if (options.max_open_files != -1) {
-      Log(InfoLogLevel::INFO_LEVEL, info_log_,
+      Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
           "[cloud_env_impl] SanitizeDirectory info.  "
           " No destination bucket specified and options.max_open_files != -1 "
           " so sst files from src bucket %s are not copied into local dir %s "
@@ -1551,7 +1547,7 @@ Status CloudEnvImpl::SanitizeDirectory(const DBOptions& options,
           GetSrcObjectPath().c_str(), local_name.c_str());
     }
     if (!cloud_env_options.keep_local_sst_files && !read_only) {
-      Log(InfoLogLevel::INFO_LEVEL, info_log_,
+      Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
           "[cloud_env_impl] SanitizeDirectory info.  "
           " No destination bucket specified and options.keep_local_sst_files "
           "is false. Existing sst files from src bucket %s will not be "
@@ -1562,12 +1558,12 @@ Status CloudEnvImpl::SanitizeDirectory(const DBOptions& options,
   }
 
   if (!do_reinit) {
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] SanitizeDirectory local directory %s is good",
         local_name.c_str());
     return Status::OK();
   }
-  Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+  Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
       "[cloud_env_impl] SanitizeDirectory local directory %s cleanup needed",
       local_name.c_str());
 
@@ -1589,19 +1585,19 @@ Status CloudEnvImpl::SanitizeDirectory(const DBOptions& options,
     if (!st.ok()) {
       return st;
     }
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] SanitizeDirectory cleaned-up: '%s'",
         pathname.c_str());
   }
 
   if (!st.ok()) {
-    Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+    Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
         "[cloud_env_impl] SanitizeDirectory error opening dir %s %s",
         local_name.c_str(), st.ToString().c_str());
     return st;
   }
 
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
       "[cloud_env_impl] SanitizeDirectory dest_equal_src = %d",
       SrcMatchesDest());
 
@@ -1634,7 +1630,7 @@ Status CloudEnvImpl::SanitizeDirectory(const DBOptions& options,
   if (!got_identity_from_src && !got_identity_from_dest) {
     // There isn't a valid db in either the src or dest bucket.
     // Return with a success code so that a new DB can be created.
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[cloud_env_impl] No valid dbs in src bucket %s src path %s "
         "or dest bucket %s dest path %s",
         GetSrcBucketName().c_str(), GetSrcObjectPath().c_str(),
@@ -1670,18 +1666,18 @@ Status CloudEnvImpl::SanitizeDirectory(const DBOptions& options,
     std::unique_ptr<WritableFile> destfile;
     st = env->NewWritableFile(CurrentFileName(local_name), &destfile, soptions);
     if (!st.ok()) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[cloud_env_impl] Unable to create local CURRENT file to %s %s",
           local_name.c_str(), st.ToString().c_str());
       return st;
     }
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] SanitizeDirectory creating dummy CURRENT file");
     std::string manifestfile =
         "MANIFEST-000001\n";  // CURRENT file needs a newline
     st = destfile->Append(Slice(manifestfile));
     if (!st.ok()) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[cloud_env_impl] Unable to write local CURRENT file to %s %s",
           local_name.c_str(), st.ToString().c_str());
       return st;
@@ -1696,7 +1692,7 @@ Status CloudEnvImpl::FetchCloudManifest(const std::string& local_dbname,
   if (!SrcMatchesDest() && !force &&
       GetBaseEnv()->FileExists(cloudmanifest).ok()) {
     // nothing to do here, we have our cloud manifest
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[cloud_env_impl] FetchCloudManifest: Nothing to do %s exists",
         cloudmanifest.c_str());
     return Status::OK();
@@ -1708,7 +1704,7 @@ Status CloudEnvImpl::FetchCloudManifest(const std::string& local_dbname,
         cloudmanifest);
     if (!st.ok() && !st.IsNotFound()) {
       // something went wrong, bail out
-      Log(InfoLogLevel::INFO_LEVEL, info_log_,
+      Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
           "[cloud_env_impl] FetchCloudManifest: Failed to fetch "
           " cloud manifest %s from dest %s",
           cloudmanifest.c_str(), GetDestBucketName().c_str());
@@ -1716,7 +1712,7 @@ Status CloudEnvImpl::FetchCloudManifest(const std::string& local_dbname,
     }
     if (st.ok()) {
       // found it!
-      Log(InfoLogLevel::INFO_LEVEL, info_log_,
+      Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
           "[cloud_env_impl] FetchCloudManifest: Fetched"
           " cloud manifest %s from dest %s",
           cloudmanifest.c_str(), GetDestBucketName().c_str());
@@ -1730,7 +1726,7 @@ Status CloudEnvImpl::FetchCloudManifest(const std::string& local_dbname,
         cloudmanifest);
     if (!st.ok() && !st.IsNotFound()) {
       // something went wrong, bail out
-      Log(InfoLogLevel::INFO_LEVEL, info_log_,
+      Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
           "[cloud_env_impl] FetchCloudManifest: Failed to fetch "
           " cloud manifest %s from src %s",
           cloudmanifest.c_str(), GetSrcBucketName().c_str());
@@ -1738,14 +1734,14 @@ Status CloudEnvImpl::FetchCloudManifest(const std::string& local_dbname,
     }
     if (st.ok()) {
       // found it!
-      Log(InfoLogLevel::INFO_LEVEL, info_log_,
+      Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
           "[cloud_env_impl] FetchCloudManifest: Fetched"
           " cloud manifest %s from src %s",
           cloudmanifest.c_str(), GetSrcBucketName().c_str());
       return st;
     }
   }
-  Log(InfoLogLevel::INFO_LEVEL, info_log_,
+  Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
       "[cloud_env_impl] FetchCloudManifest: Creating new"
       " cloud manifest for %s",
       local_dbname.c_str());
@@ -1825,7 +1821,7 @@ Status CloudEnvImpl::RollNewEpoch(const std::string& local_dbname) {
 Status CloudEnvImpl::SaveDbid(const std::string& bucket_name,
                               const std::string& dbid,
                               const std::string& dirname) {
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_, "[%s] SaveDbid dbid %s dir '%s'",
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "[%s] SaveDbid dbid %s dir '%s'",
       Name(), dbid.c_str(), dirname.c_str());
 
   std::string dbidkey = GetDbIdKey(dbid);
@@ -1836,12 +1832,12 @@ Status CloudEnvImpl::SaveDbid(const std::string& bucket_name,
                                                            metadata);
 
   if (!st.ok()) {
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[%s] Bucket %s SaveDbid error in saving dbid %s dirname %s %s", Name(),
         bucket_name.c_str(), dbid.c_str(), dirname.c_str(),
         st.ToString().c_str());
   } else {
-    Log(InfoLogLevel::INFO_LEVEL, info_log_,
+    Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
         "[%s] Bucket %s SaveDbid dbid %s dirname %s %s", bucket_name.c_str(),
         Name(), dbid.c_str(), dirname.c_str(), "ok");
   }
@@ -1856,7 +1852,7 @@ Status CloudEnvImpl::GetPathForDbid(const std::string& bucket,
                                     std::string* dirname) {
   std::string dbidkey = GetDbIdKey(dbid);
 
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
       "[%s] Bucket %s GetPathForDbid dbid %s", Name(), bucket.c_str(),
       dbid.c_str());
 
@@ -1865,11 +1861,11 @@ Status CloudEnvImpl::GetPathForDbid(const std::string& bucket,
       GetStorageProvider()->GetCloudObjectMetadata(bucket, dbidkey, &info);
   if (!st.ok()) {
     if (st.IsNotFound()) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[%s] %s GetPathForDbid error non-existent dbid %s %s", Name(),
           bucket.c_str(), dbid.c_str(), st.ToString().c_str());
     } else {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[%s] %s GetPathForDbid error dbid %s %s", bucket.c_str(), Name(),
           dbid.c_str(), st.ToString().c_str());
     }
@@ -1884,8 +1880,9 @@ Status CloudEnvImpl::GetPathForDbid(const std::string& bucket,
   } else {
     st = Status::NotFound("GetPathForDbid");
   }
-  Log(InfoLogLevel::INFO_LEVEL, info_log_, "[%s] %s GetPathForDbid dbid %s %s",
-      Name(), bucket.c_str(), dbid.c_str(), st.ToString().c_str());
+  Log(InfoLogLevel::INFO_LEVEL, GetLogger(),
+      "[%s] %s GetPathForDbid dbid %s %s", Name(), bucket.c_str(), dbid.c_str(),
+      st.ToString().c_str());
   return st;
 }
 
@@ -1898,7 +1895,7 @@ Status CloudEnvImpl::GetDbidList(const std::string& bucket, DbidList* dblist) {
   Status st = GetStorageProvider()->ListCloudObjects(bucket, kDbIdRegistry(),
                                                      &dbid_list);
   if (!st.ok()) {
-    Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+    Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
         "[%s] %s GetDbidList error in GetChildrenFromS3 %s", Name(),
         bucket.c_str(), st.ToString().c_str());
     return st;
@@ -1908,7 +1905,7 @@ Status CloudEnvImpl::GetDbidList(const std::string& bucket, DbidList* dblist) {
     std::string dirname;
     st = GetPathForDbid(bucket, dbid, &dirname);
     if (!st.ok()) {
-      Log(InfoLogLevel::ERROR_LEVEL, info_log_,
+      Log(InfoLogLevel::ERROR_LEVEL, GetLogger(),
           "[%s] %s GetDbidList error in GetPathForDbid(%s) %s", Name(),
           bucket.c_str(), dbid.c_str(), st.ToString().c_str());
       return st;
@@ -1927,7 +1924,7 @@ Status CloudEnvImpl::DeleteDbid(const std::string& bucket,
   // fetch the list all all dbids
   std::string dbidkey = GetDbIdKey(dbid);
   Status st = GetStorageProvider()->DeleteCloudObject(bucket, dbidkey);
-  Log(InfoLogLevel::DEBUG_LEVEL, info_log_,
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(),
       "[%s] %s DeleteDbid DeleteDbid(%s) %s", Name(), bucket.c_str(),
       dbid.c_str(), st.ToString().c_str());
   return st;
@@ -1983,27 +1980,30 @@ Status CloudEnvImpl::PrepareOptions(const ConfigOptions& options) {
 
 Status CloudEnvImpl::ValidateOptions(const DBOptions& db_opts,
                                      const ColumnFamilyOptions& cf_opts) const {
-  if (info_log_ == nullptr) {
-    info_log_ = db_opts.info_log;
+  auto logger = cloud_env_options.info_log;
+  if (logger == nullptr) {
+    auto copts = const_cast<CloudEnvOptions*>(GetOptions<CloudEnvOptions>());
+    copts->info_log = db_opts.info_log;
+    logger = copts->info_log;
   }
-  Header(info_log_, "     %s.src_bucket_name: %s", Name(),
+  Header(logger, "     %s.src_bucket_name: %s", Name(),
          cloud_env_options.src_bucket.GetBucketName().c_str());
-  Header(info_log_, "     %s.src_object_path: %s", Name(),
+  Header(logger, "     %s.src_object_path: %s", Name(),
          cloud_env_options.src_bucket.GetObjectPath().c_str());
-  Header(info_log_, "     %s.src_bucket_region: %s", Name(),
+  Header(logger, "     %s.src_bucket_region: %s", Name(),
          cloud_env_options.src_bucket.GetRegion().c_str());
-  Header(info_log_, "     %s.dest_bucket_name: %s", Name(),
+  Header(logger, "     %s.dest_bucket_name: %s", Name(),
          cloud_env_options.dest_bucket.GetBucketName().c_str());
-  Header(info_log_, "     %s.dest_object_path: %s", Name(),
+  Header(logger, "     %s.dest_object_path: %s", Name(),
          cloud_env_options.dest_bucket.GetObjectPath().c_str());
-  Header(info_log_, "     %s.dest_bucket_region: %s", Name(),
+  Header(logger, "     %s.dest_bucket_region: %s", Name(),
          cloud_env_options.dest_bucket.GetRegion().c_str());
   Status s = CheckValidity();
   if (s.ok()) {
-    Header(info_log_, "     %s.storage_provider: %s", Name(),
+    Header(logger, "     %s.storage_provider: %s", Name(),
            GetStorageProvider()->Name());
     if (cloud_env_options.cloud_log_controller) {
-      Header(info_log_, "     %s.log controller: %s", Name(),
+      Header(logger, "     %s.log controller: %s", Name(),
              cloud_env_options.cloud_log_controller->Name());
     }
     return CloudEnv::ValidateOptions(db_opts, cf_opts);
