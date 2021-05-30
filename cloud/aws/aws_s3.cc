@@ -372,11 +372,6 @@ class S3StorageProvider : public CloudStorageProviderImpl {
   virtual const char* Name() const override { return kS3(); }
   Status CreateBucket(const std::string& bucket) override;
   Status ExistsBucket(const std::string& bucket) override;
-  Status EmptyBucket(const std::string& bucket_name,
-                     const std::string& object_path) override;
-  // Empties all contents of the associated cloud storage bucket.
-  // Status EmptyBucket(const std::string& bucket_name,
-  //                   const std::string& object_path) override;
   // Delete the specified object from the specified cloud bucket
   Status DeleteCloudObject(const std::string& bucket_name,
                            const std::string& object_path) override;

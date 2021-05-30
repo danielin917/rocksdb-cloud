@@ -76,7 +76,6 @@ class CloudLogController : public Configurable {
   virtual CloudLogWritableFile* CreateWritableFile(
       const std::string& fname, const EnvOptions& options) = 0;
 
-
   // Directory where files are cached locally.
   virtual const std::string& GetCacheDir() const = 0;
   virtual Status const status() const = 0;

@@ -197,7 +197,7 @@ class CloudEnvOptions {
 
   // Specifies the class responsible for accessing objects in the cloud.
   // A null value indicates that the default storage provider based on
-  // the cloud env be used. 
+  // the cloud env be used.
   // Default:  null
   std::shared_ptr<CloudStorageProvider> storage_provider;
 
@@ -339,16 +339,12 @@ class CloudEnvOptions {
   // Default: false.
   bool skip_cloud_files_in_getchildren;
 
-<<<<<<< HEAD
   // If true, the files from S3 will be downloaded using direct IO. It is
   // recommended to set this to true, the only reason the default is false is to
   // avoid behavior changes with default configuration.
   // The options is ignored if use_aws_transfer_manager = true.
   // Default: false
   bool use_direct_io_for_cloud_download;
-=======
-  std::shared_ptr<Logger> info_log;  // informational messages
->>>>>>> 5dcb834a4 (Move info_log; Change test constructors)
 
   CloudEnvOptions(
       CloudType _cloud_type = CloudType::kCloudAws,
@@ -433,9 +429,11 @@ class CloudEnv : public Env, public Configurable {
   virtual ~CloudEnv();
 
   static void RegisterCloudObjects(const std::string& mode = "");
-  static Status CreateFromString(const ConfigOptions& config_options, const std::string& id,
+  static Status CreateFromString(const ConfigOptions& config_options,
+                                 const std::string& id,
                                  std::unique_ptr<CloudEnv>* env);
-  static Status CreateFromString(const ConfigOptions& config_options, const std::string& id,
+  static Status CreateFromString(const ConfigOptions& config_options,
+                                 const std::string& id,
                                  const CloudEnvOptions& cloud_options,
                                  std::unique_ptr<CloudEnv>* env);
   static const char* kCloud() { return "cloud"; }
@@ -464,14 +462,14 @@ class CloudEnv : public Env, public Configurable {
                             const std::string& dbid) = 0;
 
   Logger* GetLogger() const { return cloud_env_options.info_log.get(); }
-  const std::shared_ptr<CloudStorageProvider>&  GetStorageProvider() const {
+  const std::shared_ptr<CloudStorageProvider>& GetStorageProvider() const {
     return cloud_env_options.storage_provider;
   }
-  
+
   const std::shared_ptr<CloudLogController>& GetLogController() const {
     return cloud_env_options.cloud_log_controller;
   }
-  
+
   // The SrcBucketName identifies the cloud storage bucket and
   // GetSrcObjectPath specifies the path inside that bucket
   // where data files reside. The specified bucket is used in

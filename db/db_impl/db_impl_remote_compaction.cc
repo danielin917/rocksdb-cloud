@@ -163,8 +163,8 @@ Status DBImpl::doCompact(const CompactionOptions& compact_options,
   if (sfm) {
     sfm->OnCompactionCompletion(c.get());
   }
-#endif // ROCKSDB_LITE
-  
+#endif  // ROCKSDB_LITE
+
   // remove our iterator
   ReleaseFileNumberFromPendingOutputs(pending_outputs_inserted_elem);
 

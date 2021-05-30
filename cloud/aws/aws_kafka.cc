@@ -203,7 +203,6 @@ class KafkaController : public CloudLogControllerImpl {
   Status PrepareOptions(const ConfigOptions& options) override;
 
  protected:
-
  private:
   Status InitializePartitions();
 
