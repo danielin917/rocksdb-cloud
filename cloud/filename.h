@@ -79,13 +79,19 @@ inline bool ends_with(std::string const& value, std::string const& ending) {
 }
 
 inline std::string CloudManifestFile(const std::string& dbname) {
-  return dbname + "/CLOUDMANIFEST";
+  static const std::string kCloudManifest = "CLOUDMANIFEST";
+  if (dbname.empty()) {
+    return kCloudManifest;
+  }
+  return dbname + "/" + kCloudManifest;
 }
 
 inline std::string ManifestFileWithEpoch(const std::string& dbname,
                                          const std::string& epoch) {
-  return epoch.empty() ? (dbname + "/MANIFEST")
-                       : (dbname + "/MANIFEST-" + epoch);
+  static const std::string kManifest = "MANIFEST";
+  std::string prefix = dbname.empty() ? "" : (dbname + "/");
+  return epoch.empty() ? (prefix + kManifest)
+                       : (prefix + kManifest +"-" + epoch);
 }
 
 inline std::string RemoveEpoch(const std::string& path) {

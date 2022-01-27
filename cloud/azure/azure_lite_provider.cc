@@ -14,6 +14,7 @@
 #include <cinttypes>
 #include <fstream>
 #include <iostream>
+#include <string>
 
 #include "cloud/cloud_env_impl.h"
 #include "cloud/cloud_storage_provider_impl.h"
@@ -89,7 +90,7 @@ class AzureBlobClient : public AzureClient {
     } else {
       //**TODO: What error information should we gather?
       std::string message =
-          method + ": ";  // + std::to_string(outcome.error().code);
+          method + ": ";
       if (IsNotFound(outcome.error())) {
         return Status::NotFound(container, message);
       } else if (blob.empty()) {
@@ -103,7 +104,8 @@ class AzureBlobClient : public AzureClient {
  public:
   AzureBlobClient(
       const std::shared_ptr<azure::storage_lite::blob_client>& client)
-      : blob_client_(client) {}
+      : blob_client_(client) {
+  }
 
   Status CreateContainer(const std::string& container) override {
     auto ret = blob_client_->create_container(container).get();
@@ -232,7 +234,7 @@ class AzureBlobClient : public AzureClient {
                        uint64_t size, char *data, uint64_t *read) override {
     //**TODO: This could be made more efficient by putting data directly into a stream...
     std::ostringstream oss;
-    
+
     auto ret = blob_client_->get_chunk_to_stream_sync(container, blob, static_cast<unsigned long long>(offset),
                                                       static_cast<unsigned long long>(size), oss);
     if (ret.success()) {
@@ -343,11 +345,16 @@ class AzureWrappedClient : public AzureBlobClient {
 
 Status AzureClient::Create(const CloudEnvOptions& cloud_opts, std::shared_ptr<AzureClient>* client) {
 #ifdef USE_AZURE
-  std::string user = getenv("AZURE_USER_NAME");
-  std::string key  = getenv("AZURE_ACCESS_KEY");
+  //std::string user = getenv("AZURE_USER_NAME");
+  //std::string key  = getenv("AZURE_ACCESS_KEY");
+  const AzureCloudAccessCredentials& cloud_credentials = cloud_opts.azure_credentials;
+  std::string account_name = cloud_credentials.account_name;
+  std::string account_key = cloud_credentials.account_key;
   
-  auto cred = std::make_shared<azure::storage_lite::shared_key_credential>(user, key);
-  auto account = std::make_shared<azure::storage_lite::storage_account>(user, cred, /* use_https */ true);
+  auto azure_cred = std::make_shared<azure::storage_lite::shared_key_credential>(account_name, account_key);
+  auto account =
+    std::make_shared<azure::storage_lite::storage_account>(
+      account_name, azure_cred, cloud_credentials.use_https, cloud_credentials.blob_endpoint);
   auto blob_client = std::make_shared<azure::storage_lite::blob_client>(account, 16);
   if (cloud_opts.use_aws_transfer_manager || true) {
     client->reset(new AzureBlobClient(blob_client));
@@ -578,7 +585,12 @@ Status AzureStorageProvider::DoGetCloudObject(const std::string& bucket_name,
                                               const std::string& object_path,
                                               const std::string& destination,
                                               uint64_t* remote_size) {
+  Log(InfoLogLevel::ERROR_LEVEL, env_->GetLogger(),
+      "Azure GET, bucket_name=%s; object_path=%s; destination=%s",
+      bucket_name.c_str(), object_path.c_str(), destination.c_str());
   Status s = GetCloudObjectSize(bucket_name, object_path, remote_size);
+
+
   if (s.ok()) {
     azure_client_->DownloadBlob(bucket_name, object_path, destination, *remote_size);
   }
@@ -589,6 +601,12 @@ Status AzureStorageProvider::DoPutCloudObject(const std::string& local_file,
                                               const std::string& bucket_name,
                                               const std::string& object_path,
                                               uint64_t file_size) {
+
+  Log(InfoLogLevel::ERROR_LEVEL, env_->GetLogger(),
+      "Azure PUT, localfile=%s; bucket_name=%s; object_path=%s; filesize=%d",
+      local_file.c_str(), bucket_name.c_str(), object_path.c_str(), file_size);
+
+
   return azure_client_->UploadBlob(local_file, bucket_name, object_path,
                                    file_size);
 }
@@ -609,7 +627,10 @@ int CloudEnvImpl::RegisterAzureObjects(ObjectLibrary& library,
 #else
         errmsg->clear();
         guard->reset(new AzureStorageProvider());
-#endif /* USE_AWS */
+#endif /* USE_AZURE */
+        if (guard) {
+        } else {
+        }
         return guard->get();
       });
   count++;

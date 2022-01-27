@@ -8,6 +8,7 @@
 #include <set>
 
 #include "cloud/cloud_env_impl.h"
+#include <iostream>
 #include "cloud/cloud_storage_provider_impl.h"
 #include "cloud/filename.h"
 #include "file/filename.h"
@@ -280,7 +281,8 @@ Status CloudStorageProviderImpl::PrepareOptions(const ConfigOptions& options) {
   return st;
 }
 
-CloudStorageProviderImpl::CloudStorageProviderImpl() : rng_(time(nullptr)) {}
+CloudStorageProviderImpl::CloudStorageProviderImpl() : rng_(time(nullptr)) {
+}
 
 CloudStorageProviderImpl::~CloudStorageProviderImpl() {}
 

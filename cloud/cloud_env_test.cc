@@ -288,8 +288,9 @@ TEST_P(CloudProviderTest, BasicTest) {
   ASSERT_EQ(objects.size(), 1);
 }
 
-INSTANTIATE_TEST_CASE_P(Mock, CloudProviderTest,
-                        ::testing::Values("provider=mock;"));
+
+//INSTANTIATE_TEST_CASE_P(Mock, CloudProviderTest,
+//                        ::testing::Values("provider=mock;"));
 #ifdef USE_AWS
 INSTANTIATE_TEST_CASE_P(AWS, CloudProviderTest, ::testing::Values("id=aws;"));
 #endif  // USE_AWS

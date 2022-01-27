@@ -3,6 +3,7 @@
 
 #include "cloud/manifest_reader.h"
 
+#include <iostream>
 #include "cloud/cloud_manifest.h"
 #include "cloud/db_cloud_impl.h"
 #include "cloud/filename.h"

@@ -8,6 +8,7 @@
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 #include <cinttypes>
 
+#include <iostream>
 #include "db/builder.h"
 #include "db/db_impl/db_impl.h"
 #include "db/error_handler.h"
@@ -479,6 +480,8 @@ Status DBImpl::Recover(
       FileOptions customized_fs(file_options_);
       customized_fs.use_direct_reads |=
           immutable_db_options_.use_direct_io_for_flush_and_compaction;
+      if (!manifest_path.empty()) {
+      }
       const std::string& fname =
           manifest_path.empty() ? current_fname : manifest_path;
       s = fs_->NewRandomAccessFile(fname, customized_fs, &idfile, nullptr);
@@ -1657,6 +1660,7 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
   }
   if (s.ok()) {
     s = impl->CreateArchivalDirectory();
+  } else {
   }
   if (!s.ok()) {
     delete impl;

@@ -5,6 +5,8 @@
 
 #include <cinttypes>
 
+#include <iostream>
+
 #include "cloud/cloud_env_wrapper.h"
 #include "cloud/cloud_log_controller_impl.h"
 #include "cloud/cloud_scheduler.h"
@@ -1943,6 +1945,7 @@ std::string CloudEnvImpl::GetWALCacheDir() {
 }
 
 Status CloudEnvImpl::PrepareOptions(const ConfigOptions& options) {
+  Log(InfoLogLevel::DEBUG_LEVEL, GetLogger(), "Old style prepareOptions");
   // If underlying env is not defined, then use PosixEnv
   if (!base_env_) {
     base_env_ = Env::Default();

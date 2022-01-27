@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cinttypes>
 
+#include <iostream>
 #include "cloud/db_cloud_impl.h"
 #include "cloud/filename.h"
 #include "cloud/manifest_reader.h"
@@ -1504,10 +1505,14 @@ TEST_P(CloudTest, CheckpointToCloud) {
   ASSERT_OK(db_->Put(WriteOptions(), "c", "d"));
   ASSERT_OK(db_->Flush(FlushOptions()));
 
+
   ASSERT_OK(
       db_->CheckpointToCloud(checkpoint_bucket, CheckpointToCloudOptions()));
 
+
   ASSERT_EQ(2, GetSSTFiles(dbname_).size());
+
+  //ValidateCloudLiveFilesSrcSize();
   CloseDB();
 
   DestroyDir(dbname_);
@@ -1515,6 +1520,14 @@ TEST_P(CloudTest, CheckpointToCloud) {
   cloud_env_options_.src_bucket = checkpoint_bucket;
 
   OpenDB();
+
+  std::set<std::string> filenames = GetSSTFiles(dbname_);
+  for (const std::string& f : filenames) {
+  }
+  std::set<uint64_t> list;
+  GetCloudLiveFilesSrc(&list);
+  //ValidateCloudLiveFilesSrcSize();
+
   std::string value;
   ASSERT_OK(db_->Get(ReadOptions(), "a", &value));
   ASSERT_EQ(value, "b");
@@ -1784,7 +1797,7 @@ INSTANTIATE_TEST_CASE_P(AWS, CloudTest, ::testing::Values("id=aws;"));
 #ifdef USE_AZURE
 INSTANTIATE_TEST_CASE_P(Azure, CloudTest, ::testing::Values("provider=azure;"));
 #endif  // USE_AZURE
-INSTANTIATE_TEST_CASE_P(Mock, CloudTest, ::testing::Values("provider=mock;"));
+//INSTANTIATE_TEST_CASE_P(Mock, CloudTest, ::testing::Values("provider=mock;"));
 }  //  namespace ROCKSDB_NAMESPACE
 
 // A black-box test for the cloud wrapper around rocksdb

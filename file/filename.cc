@@ -248,6 +248,9 @@ std::string MetaDatabaseName(const std::string& dbname, uint64_t number) {
 }
 
 std::string IdentityFileName(const std::string& dbname) {
+  if (dbname.empty()) {
+    return "IDENTITY";
+  }
   return dbname + "/IDENTITY";
 }
 

@@ -936,12 +936,15 @@ set(SOURCES
         cloud/aws/aws_kinesis.cc
         cloud/aws/aws_retry.cc
         cloud/aws/aws_s3.cc
+        cloud/azure/azure_env.cc
+        cloud/azure/azure_lite_provider.cc
         cloud/db_cloud_impl.cc
         cloud/cloud_env.cc
         cloud/cloud_env_impl.cc
         cloud/cloud_env_options.cc
         cloud/cloud_log_controller.cc
         cloud/manifest_reader.cc
+        cloud/mock_cloud_storage_provider.cc
         cloud/purge.cc
         cloud/cloud_manifest.cc
         cloud/cloud_scheduler.cc

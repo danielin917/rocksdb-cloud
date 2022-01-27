@@ -4,6 +4,7 @@
 //  (found in the LICENSE.Apache file in the root directory).
 
 #include "rocksdb/utilities/object_registry.h"
+#include <iostream>
 
 #include "logging/logging.h"
 #include "rocksdb/customizable.h"

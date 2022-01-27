@@ -5,6 +5,7 @@
 
 #include <cinttypes>
 
+#include <iostream>
 #include "cloud/filename.h"
 #include "cloud/manifest_reader.h"
 #include "env/composite_env_wrapper.h"
@@ -183,6 +184,7 @@ Status DBCloud::Open(const Options& opt, const std::string& local_dbname,
     DBCloudImpl* cloud = new DBCloudImpl(db);
     *dbptr = cloud;
     db->GetDbIdentity(dbid);
+  } else {
   }
   Log(InfoLogLevel::INFO_LEVEL, options.info_log,
       "Opened cloud db with local dir %s dbid %s. %s", local_dbname.c_str(),
@@ -286,6 +288,7 @@ Status DBCloudImpl::DoCheckpointToCloud(
   auto cenv = static_cast<CloudEnvImpl*>(GetEnv());
   auto base_env = cenv->GetBaseEnv();
 
+
   auto st =
       GetLiveFiles(live_files, &manifest_file_size, options.flush_memtable);
   if (!st.ok()) {
@@ -304,6 +307,7 @@ Status DBCloudImpl::DoCheckpointToCloud(
       // ignore
       continue;
     }
+
     auto remapped_fname = cenv->RemapFilename(f);
     files_to_copy.emplace_back(remapped_fname, remapped_fname);
   }

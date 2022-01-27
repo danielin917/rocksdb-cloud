@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "cloud/aws/aws_env.h"
+#include "cloud/azure/azure_env.h"
 #include "cloud/cloud_env_impl.h"
 #include "cloud/cloud_env_wrapper.h"
 #include "cloud/cloud_log_controller_impl.h"
@@ -631,6 +632,27 @@ Status CloudEnv::NewAwsEnv(
   return NewAwsEnv(base_env, options, logger, cenv);
 }
 
+Status CloudEnv::NewAzureEnv(
+    Env* base_env, const std::string& src_cloud_bucket,
+    const std::string& src_cloud_object, const std::string& src_cloud_region,
+    const std::string& dest_cloud_bucket, const std::string& dest_cloud_object,
+    const std::string& dest_cloud_region, const CloudEnvOptions& cloud_options,
+    const std::shared_ptr<Logger>& logger, CloudEnv** cenv) {
+  CloudEnvOptions options = cloud_options;
+  if (!src_cloud_bucket.empty())
+    options.src_bucket.SetBucketName(src_cloud_bucket);
+  if (!src_cloud_object.empty())
+    options.src_bucket.SetObjectPath(src_cloud_object);
+  if (!src_cloud_region.empty()) options.src_bucket.SetRegion(src_cloud_region);
+  if (!dest_cloud_bucket.empty())
+    options.dest_bucket.SetBucketName(dest_cloud_bucket);
+  if (!dest_cloud_object.empty())
+    options.dest_bucket.SetObjectPath(dest_cloud_object);
+  if (!dest_cloud_region.empty())
+    options.dest_bucket.SetRegion(dest_cloud_region);
+  return NewAzureEnv(base_env, options, logger, cenv);
+}
+
 int DoRegisterCloudObjects(ObjectLibrary& library, const std::string& arg) {
   int count = 0;
   // Register the Env types
@@ -772,12 +794,15 @@ Status CloudEnv::CreateFromString(const ConfigOptions& config_options,
       if (s.ok()) {
         Options tmp;
         s = cenv->ValidateOptions(tmp, tmp);
+      } else {
       }
+    } else {
     }
   }
 
   if (s.ok()) {
     result->reset(static_cast<CloudEnv*>(env.release()));
+  } else {
   }
 
   return s;
@@ -809,6 +834,35 @@ Status CloudEnv::NewAwsEnv(Env* base_env, const CloudEnvOptions& options,
     }
   }
   return st;
+}
+#endif
+
+#ifndef USE_AZURE
+Status CloudEnv::NewAzureEnv(Env* /*base_env*/,
+                             const CloudEnvOptions& /*options*/,
+                             const std::shared_ptr<Logger>& /*logger*/,
+                             CloudEnv** /*cenv*/) {
+  return Status::NotSupported("RocksDB Cloud not compiled with Azure support");
+}
+#else
+Status CloudEnv::NewAzureEnv(Env* base_env, const CloudEnvOptions& options,
+                             const std::shared_ptr<Logger>& logger,
+                             CloudEnv** cenv) {
+  CloudEnv::RegisterCloudObjects();
+  // Dump out cloud env options
+  options.Dump(logger.get());
+
+  Status st = AzureEnv::NewAzureEnv(base_env, options, logger, cenv);
+  if (st.ok()) {
+    // store a copy of the logger
+    CloudEnvImpl* cloud = static_cast<CloudEnvImpl*>(*cenv);
+
+    // start the purge thread only if there is a destination bucket
+    if (options.dest_bucket.IsValid() && options.run_purger) {
+      cloud->purge_thread_ = std::thread([cloud] { cloud->Purger(); });
+    }
+  }
+  return Status::OK();
 }
 #endif
 

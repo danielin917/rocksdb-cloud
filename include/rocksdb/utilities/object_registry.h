@@ -7,6 +7,7 @@
 
 #ifndef ROCKSDB_LITE
 
+#include <iostream>
 #include <functional>
 #include <map>
 #include <memory>
@@ -118,6 +119,13 @@ class ObjectLibrary {
     return registrar(*this, arg);
   }
 
+  std::string toString() {
+    std::string s;
+    for (const auto& iter : entries_) {
+      s += iter.first + " ";
+    }
+    return s;
+  }
   // Returns the default ObjectLibrary
   static std::shared_ptr<ObjectLibrary>& Default();
 
@@ -182,7 +190,10 @@ class ObjectRegistry {
     if (basic != nullptr) {
       const auto* factory =
           static_cast<const ObjectLibrary::FactoryEntry<T>*>(basic);
-      return factory->NewFactoryObject(target, guard, errmsg);
+      T *p = factory->NewFactoryObject(target, guard, errmsg);
+      assert(guard);
+      assert(p);
+      return p;
     } else {
       *errmsg = std::string("Could not load ") + T::Type();
       return nullptr;

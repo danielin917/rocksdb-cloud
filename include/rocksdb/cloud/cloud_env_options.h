@@ -57,6 +57,21 @@ enum class AwsAccessType {
   kAnonymous,
 };
 
+class AzureCloudAccessCredentials {
+ public:
+/*
+  AzureCloudAccessCredentials() {
+    account_name = getenv("AZURE_ACCOUNT");
+    account_key = getenv("AZURE_ACCOUNT_KEY");
+    blob_endpoint = getenv("AZURE_BLOB_ENDPOINT");
+  }
+*/
+  std::string account_name{"devstoreaccount1"};
+  std::string account_key{"Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="};
+  std::string blob_endpoint{"127.0.0.1:10000/devstoreaccount1"};
+  bool use_https{false};
+};
+
 // Credentials needed to access AWS cloud service
 class AwsCloudAccessCredentials {
  public:
@@ -220,6 +235,7 @@ class CloudEnvOptions {
 
   // If present, s3_client_factory will be used to create S3Client instances
   S3ClientFactory s3_client_factory;
+  AzureCloudAccessCredentials azure_credentials;
 
   // Only used if keep_local_log_files is true and log_type is kKafka.
   KafkaLogOptions kafka_log_options;
@@ -438,6 +454,7 @@ class CloudEnv : public Env, public Configurable {
                                  std::unique_ptr<CloudEnv>* env);
   static const char* kCloud() { return "cloud"; }
   static const char* kAws() { return "aws"; }
+  static const char* kAzure() { return "azure"; }
   virtual const char* Name() const { return "cloud-env"; }
   // Returns the underlying env
   Env* GetBaseEnv() { return base_env_; }
@@ -541,6 +558,30 @@ class CloudEnv : public Env, public Configurable {
                           const std::shared_ptr<Logger>& logger,
                           CloudEnv** cenv);
   static Status NewAwsEnv(Env* base_env, const CloudEnvOptions& env_options,
+                          const std::shared_ptr<Logger>& logger,
+                          CloudEnv** cenv);
+
+  // Create a new Azure env.
+  // src_bucket_name: bucket name suffix where db data is read from
+  // src_object_prefix: all db objects in source bucket are prepended with this
+  // dest_bucket_name: bucket name suffix where db data is written to
+  // dest_object_prefix: all db objects in destination bucket are prepended with
+  // this
+  //
+  // If src_bucket_name is empty, then the associated db does not read any
+  // data from cloud storage.
+  // If dest_bucket_name is empty, then the associated db does not write any
+  // data to cloud storage.
+  static Status NewAzureEnv(Env* base_env, const std::string& src_bucket_name,
+                          const std::string& src_object_prefix,
+                          const std::string& src_bucket_region,
+                          const std::string& dest_bucket_name,
+                          const std::string& dest_object_prefix,
+                          const std::string& dest_bucket_region,
+                          const CloudEnvOptions& env_options,
+                          const std::shared_ptr<Logger>& logger,
+                          CloudEnv** cenv);
+  static Status NewAzureEnv(Env* base_env, const CloudEnvOptions& env_options,
                           const std::shared_ptr<Logger>& logger,
                           CloudEnv** cenv);
 };
