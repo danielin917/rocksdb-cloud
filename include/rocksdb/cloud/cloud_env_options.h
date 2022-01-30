@@ -362,6 +362,9 @@ class CloudEnvOptions {
   // Default: false
   bool use_direct_io_for_cloud_download;
 
+
+  std::shared_ptr<Logger> info_log; // informational messages
+
   CloudEnvOptions(
       CloudType _cloud_type = CloudType::kCloudAws,
       LogType _log_type = LogType::kLogKafka,

@@ -148,7 +148,7 @@ void CloudEnvImpl::log(InfoLogLevel level, const std::string& fname,
   uint64_t usage = cloud_env_options.sst_file_cache->GetUsage();
   uint64_t capacity = cloud_env_options.sst_file_cache->GetCapacity();
   long percent = (capacity > 0 ? (100L * usage / capacity) : 0);
-  Log(level, info_log_,
+  Log(level, GetLogger(),
       "[%s] FileCache %s %s cache-used %" PRIu64 "/%" PRIu64 "(%ld%%) bytes",
       Name(), fname.c_str(), msg.c_str(), usage, capacity, percent);
 }
