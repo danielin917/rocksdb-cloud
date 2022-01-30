@@ -652,10 +652,12 @@ TEST_P(CloudTest, DbidRegistry) {
 
 TEST_P(CloudTest, KeepLocalFiles) {
   cloud_env_options_.keep_local_sst_files = true;
+#ifdef USE_AWS
   for (int iter = 0; iter < 4; ++iter) {
     cloud_env_options_.use_direct_io_for_cloud_download =
         iter == 0 || iter == 1;
     cloud_env_options_.use_aws_transfer_manager = iter == 0 || iter == 3;
+#endif
     // Create two files
     OpenDB();
     std::string value;
@@ -674,6 +676,9 @@ TEST_P(CloudTest, KeepLocalFiles) {
         std::count_if(files.begin(), files.end(), [](const std::string& file) {
           return file.find("sst") != std::string::npos;
         });
+    for (auto f: files) {
+      std::cout << "Files " << f << std::endl;
+    }
     ASSERT_EQ(sst_files, 2);
 
     ASSERT_OK(db_->Get(ReadOptions(), "Hello", &value));
@@ -683,7 +688,9 @@ TEST_P(CloudTest, KeepLocalFiles) {
 
     CloseDB();
     ValidateCloudLiveFilesSrcSize();
+#ifdef USE_AWS
   }
+#endif
 }
 
 #ifdef USE_AWS
@@ -1654,14 +1661,14 @@ TEST_P(CloudTest, SharedBlockCache) {
 }
 
 // Verify that sst_file_cache and file_cache cannot be set together
-TEST_F(CloudTest, KeepLocalFilesAndFileCache) {
+TEST_P(CloudTest, KeepLocalFilesAndFileCache) {
   cloud_env_options_.sst_file_cache = NewLRUCache(1024);  // 1 KB cache
   cloud_env_options_.keep_local_sst_files = true;
   ASSERT_TRUE(checkOpen().IsInvalidArgument());
 }
 
 // Verify that sst_file_cache can be disabled
-TEST_F(CloudTest, FileCacheZero) {
+TEST_P(CloudTest, FileCacheZero) {
   cloud_env_options_.sst_file_cache = NewLRUCache(0);  // zero size
   OpenDB();
   CloudEnvImpl* cimpl = static_cast<CloudEnvImpl*>(aenv_.get());
@@ -1682,7 +1689,7 @@ TEST_F(CloudTest, FileCacheZero) {
 }
 
 // Verify that sst_file_cache is very small, so no files are local.
-TEST_F(CloudTest, FileCacheSmall) {
+TEST_P(CloudTest, FileCacheSmall) {
   cloud_env_options_.sst_file_cache = NewLRUCache(10);  // Practically zero size
   OpenDB();
   CloudEnvImpl* cimpl = static_cast<CloudEnvImpl*>(aenv_.get());
@@ -1697,7 +1704,7 @@ TEST_F(CloudTest, FileCacheSmall) {
 }
 
 // Relatively large sst_file cache, so all files are local.
-TEST_F(CloudTest, FileCacheLarge) {
+TEST_P(CloudTest, FileCacheLarge) {
   size_t capacity = 10240L;
   std::shared_ptr<Cache> cache = NewLRUCache(capacity);
   cloud_env_options_.sst_file_cache = cache;
@@ -1730,7 +1737,7 @@ TEST_F(CloudTest, FileCacheLarge) {
 }
 
 // Cache will have a few files only.
-TEST_F(CloudTest, FileCacheOnDemand) {
+TEST_P(CloudTest, FileCacheOnDemand) {
   size_t capacity = 3000;
   int num_shard_bits = 1;
   bool strict_capacity_limit = false;

@@ -131,19 +131,19 @@ static std::unordered_map<std::string, OptionTypeInfo>
          {0, OptionType::kString, OptionVerificationType::kNormal,
           OptionTypeFlags::kCompareNever,
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const std::string& value, char* addr) {
+             const std::string& value, void* addr) {
             auto bucket = reinterpret_cast<BucketOptions*>(addr);
             bucket->SetObjectPath(value);
             return Status::OK();
           },
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const char* addr, std::string* value) {
+             const void* addr, std::string* value) {
             auto bucket = reinterpret_cast<const BucketOptions*>(addr);
             *value = bucket->GetObjectPath();
             return Status::OK();
           },
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const char* addr1, const char* addr2, std::string* /*mismatch*/) {
+             const void* addr1, const void* addr2, std::string* /*mismatch*/) {
             auto bucket1 = reinterpret_cast<const BucketOptions*>(addr1);
             auto bucket2 = reinterpret_cast<const BucketOptions*>(addr2);
             return bucket1->GetObjectPath() == bucket2->GetObjectPath();
@@ -152,19 +152,19 @@ static std::unordered_map<std::string, OptionTypeInfo>
          {0, OptionType::kString, OptionVerificationType::kNormal,
           OptionTypeFlags::kCompareNever,
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const std::string& value, char* addr) {
+             const std::string& value, void* addr) {
             auto bucket = reinterpret_cast<BucketOptions*>(addr);
             bucket->SetRegion(value);
             return Status::OK();
           },
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const char* addr, std::string* value) {
+             const void* addr, std::string* value) {
             auto bucket = reinterpret_cast<const BucketOptions*>(addr);
             *value = bucket->GetRegion();
             return Status::OK();
           },
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const char* addr1, const char* addr2, std::string* /*mismatch*/) {
+             const void* addr1, const void* addr2, std::string* /*mismatch*/) {
             auto bucket1 = reinterpret_cast<const BucketOptions*>(addr1);
             auto bucket2 = reinterpret_cast<const BucketOptions*>(addr2);
             return bucket1->GetRegion() == bucket2->GetRegion();
@@ -173,19 +173,19 @@ static std::unordered_map<std::string, OptionTypeInfo>
          {0, OptionType::kString, OptionVerificationType::kNormal,
           OptionTypeFlags::kNone,
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const std::string& value, char* addr) {
+             const std::string& value, void* addr) {
             auto bucket = reinterpret_cast<BucketOptions*>(addr);
             bucket->SetBucketName(bucket->GetBucketName(false), value);
             return Status::OK();
           },
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const char* addr, std::string* value) {
+             const void* addr, std::string* value) {
             auto bucket = reinterpret_cast<const BucketOptions*>(addr);
             *value = bucket->GetBucketPrefix();
             return Status::OK();
           },
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const char* addr1, const char* addr2, std::string* /*mismatch*/) {
+             const void* addr1, const void* addr2, std::string* /*mismatch*/) {
             auto bucket1 = reinterpret_cast<const BucketOptions*>(addr1);
             auto bucket2 = reinterpret_cast<const BucketOptions*>(addr2);
             return bucket1->GetBucketPrefix() == bucket2->GetBucketPrefix();
@@ -194,19 +194,19 @@ static std::unordered_map<std::string, OptionTypeInfo>
          {0, OptionType::kString, OptionVerificationType::kNormal,
           OptionTypeFlags::kNone,
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const std::string& value, char* addr) {
+             const std::string& value, void* addr) {
             auto bucket = reinterpret_cast<BucketOptions*>(addr);
             bucket->SetBucketName(value);
             return Status::OK();
           },
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const char* addr, std::string* value) {
+             const void* addr, std::string* value) {
             auto bucket = reinterpret_cast<const BucketOptions*>(addr);
             *value = bucket->GetBucketName(false);
             return Status::OK();
           },
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const char* addr1, const char* addr2, std::string* /*mismatch*/) {
+             const void* addr1, const void* addr2, std::string* /*mismatch*/) {
             auto bucket1 = reinterpret_cast<const BucketOptions*>(addr1);
             auto bucket2 = reinterpret_cast<const BucketOptions*>(addr2);
             return bucket1->GetBucketName(false) ==
@@ -216,7 +216,7 @@ static std::unordered_map<std::string, OptionTypeInfo>
          {0, OptionType::kUnknown, OptionVerificationType::kAlias,
           OptionTypeFlags::kNone,
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const std::string& value, char* addr) {
+             const std::string& value, void* addr) {
             auto bucket = reinterpret_cast<BucketOptions*>(addr);
             std::string name = value;
             std::string path;
@@ -281,7 +281,7 @@ static std::unordered_map<std::string, OptionTypeInfo>
           (OptionTypeFlags::kShared | OptionTypeFlags::kCompareLoose |
            OptionTypeFlags::kCompareNever | OptionTypeFlags::kAllowNull),
           [](const ConfigOptions& opts, const std::string& /*name*/,
-             const std::string& value, char* addr) {
+             const std::string& value, void* addr) {
             auto provider =
                 reinterpret_cast<std::shared_ptr<CloudStorageProvider>*>(addr);
             return CloudStorageProvider::CreateFromString(opts, value,
@@ -294,7 +294,7 @@ static std::unordered_map<std::string, OptionTypeInfo>
            OptionTypeFlags::kCompareNever | OptionTypeFlags::kAllowNull),
           // Creates a new TableFactory based on value
           [](const ConfigOptions& opts, const std::string& /*name*/,
-             const std::string& value, char* addr) {
+             const std::string& value, void* addr) {
             auto controller =
                 reinterpret_cast<std::shared_ptr<CloudLogController>*>(addr);
             Status s =
@@ -313,7 +313,7 @@ static std::unordered_map<std::string, OptionTypeInfo>
          {0, OptionType::kUnknown, OptionVerificationType::kAlias,
           OptionTypeFlags::kNone,
           [](const ConfigOptions& /*opts*/, const std::string& /*name*/,
-             const std::string& value, char* addr) {
+             const std::string& value, void* addr) {
             auto copts = reinterpret_cast<CloudEnvOptions*>(addr);
             std::string name;
             std::string path;
