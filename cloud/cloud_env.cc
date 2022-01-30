@@ -365,8 +365,7 @@ Status CloudEnvOptions::Serialize(const ConfigOptions& config_options, std::stri
 
 CloudEnv::CloudEnv(const CloudEnvOptions& options, Env* base)
     : cloud_env_options(options), base_env_(base) {
-  ConfigurableHelper::RegisterOptions(*this, &cloud_env_options,
-                                      &cloud_env_option_type_info);
+  RegisterOptions(&cloud_env_options, &cloud_env_option_type_info);
 }
 
 CloudEnv::~CloudEnv() {
