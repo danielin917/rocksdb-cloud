@@ -191,8 +191,6 @@ class ObjectRegistry {
       const auto* factory =
           static_cast<const ObjectLibrary::FactoryEntry<T>*>(basic);
       T *p = factory->NewFactoryObject(target, guard, errmsg);
-      assert(guard);
-      assert(p);
       return p;
     } else {
       *errmsg = std::string("Could not load ") + T::Type();

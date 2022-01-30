@@ -16,6 +16,7 @@
 #include <iostream>
 #include <string>
 
+#include "cloud/azure/azure_env.h"
 #include "cloud/cloud_env_impl.h"
 #include "cloud/cloud_storage_provider_impl.h"
 #include "cloud/filename.h"
@@ -615,7 +616,21 @@ Status AzureStorageProvider::DoPutCloudObject(const std::string& local_file,
 int CloudEnvImpl::RegisterAzureObjects(ObjectLibrary& library,
                                        const std::string& /*arg*/) {
   int count = 0;
-  library.Register<CloudStorageProvider>(  // s3
+  library.Register<Env>(CloudEnvImpl::kAzure(),
+                        [](const std::string& /*uri*/,
+                           std::unique_ptr<Env>* guard, std::string *errmsg) {
+  #ifdef USE_AZURE
+                            *errmsg="";
+                            guard->reset(new AzureEnv(Env::Default(), CloudEnvOptions()));
+  #else
+                            *errmsg = "Azure not supported";
+                            guard->reset();
+  #endif // USE_AZURE
+                            return guard->get();
+                          });
+  count++;
+
+  library.Register<CloudStorageProvider>(  // azure
       AzureClient::kAzure(),
       [](const std::string& /*uri*/,
          std::unique_ptr<CloudStorageProvider>* guard, std::string* errmsg) {

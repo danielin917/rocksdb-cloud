@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Rockset
+
 
 #include "cloud/cloud_log_controller_impl.h"
 #include "cloud/cloud_storage_provider_impl.h"
@@ -112,6 +112,18 @@ TEST_F(CloudEnvTest, ConfigureBucketOptions) {
   ASSERT_EQ(copts.dest_bucket.GetRegion(), copy.dest_bucket.GetRegion());
 }
 
+std::string sanitizeBucketName(const std::string prefix) {
+  std::string s = prefix;
+  for (std::string::size_type i=0; i < s.length(); ++i) {
+      if (s[i] == '.') {
+        s[i] = '-';
+      } else {
+        s[i] = std::tolower(s[i]);
+      }
+    }
+  return s;
+}
+
 TEST_F(CloudEnvTest, ConfigureEnv) {
   ConfigOptions config_options;
   config_options.invoke_prepare_options = false;
@@ -133,8 +145,10 @@ TEST_F(CloudEnvTest, TestInitialize) {
   ASSERT_NE(cenv_, nullptr);
   ASSERT_STREQ(cenv_->Name(), "cloud");
 
-  ASSERT_TRUE(StartsWith(cenv_->GetSrcBucketName(),
-                         bucket.GetBucketPrefix() + "cloudenvtest."));
+  std::cout << "Source bucket name " << cenv_->GetSrcBucketName() << std::endl;
+  std::cout << bucket.GetBucketPrefix() << std::endl;
+  std::string s = sanitizeBucketName(bucket.GetBucketPrefix() + "cloudenvtest.");
+  ASSERT_TRUE(StartsWith(cenv_->GetSrcBucketName(), s));
   ASSERT_EQ(cenv_->GetSrcObjectPath(), "/test/path");
   ASSERT_TRUE(cenv_->SrcMatchesDest());
 
@@ -142,8 +156,8 @@ TEST_F(CloudEnvTest, TestInitialize) {
       config_options, "id=cloud; TEST=cloudenvtest2:/test/path2?here", &cenv_));
   ASSERT_NE(cenv_, nullptr);
   ASSERT_STREQ(cenv_->Name(), "cloud");
-  ASSERT_TRUE(StartsWith(cenv_->GetSrcBucketName(),
-                         bucket.GetBucketPrefix() + "cloudenvtest2."));
+  s = sanitizeBucketName(bucket.GetBucketPrefix() + "cloudenvtest2.");
+  ASSERT_TRUE(StartsWith(cenv_->GetSrcBucketName(), s));
   ASSERT_EQ(cenv_->GetSrcObjectPath(), "/test/path2");
   ASSERT_EQ(cenv_->GetCloudEnvOptions().src_bucket.GetRegion(), "here");
   ASSERT_TRUE(cenv_->SrcMatchesDest());
@@ -155,10 +169,10 @@ TEST_F(CloudEnvTest, TestInitialize) {
                                  &cenv_));
   ASSERT_NE(cenv_, nullptr);
   ASSERT_STREQ(cenv_->Name(), "cloud");
-  ASSERT_EQ(cenv_->GetSrcBucketName(), bucket.GetBucketPrefix() + "my_bucket");
+  ASSERT_EQ(cenv_->GetSrcBucketName(), sanitizeBucketName(bucket.GetBucketPrefix() + "my_bucket"));
   ASSERT_EQ(cenv_->GetSrcObjectPath(), "/test/path3");
-  ASSERT_TRUE(StartsWith(cenv_->GetDestBucketName(),
-                         bucket.GetBucketPrefix() + "cloudenvtest3."));
+  s = sanitizeBucketName(bucket.GetBucketPrefix() + "cloudenvtest3.");
+  ASSERT_TRUE(StartsWith(cenv_->GetDestBucketName(), s));
   ASSERT_EQ(cenv_->GetDestObjectPath(), "/my_path");
 }
 
