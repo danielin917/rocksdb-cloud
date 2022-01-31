@@ -604,7 +604,7 @@ Status AzureStorageProvider::DoPutCloudObject(const std::string& local_file,
                                               uint64_t file_size) {
 
   Log(InfoLogLevel::ERROR_LEVEL, env_->GetLogger(),
-      "Azure PUT, localfile=%s; bucket_name=%s; object_path=%s; filesize=%d",
+      "Azure PUT, localfile=%s; bucket_name=%s; object_path=%s; filesize=%llu",
       local_file.c_str(), bucket_name.c_str(), object_path.c_str(), file_size);
 
 

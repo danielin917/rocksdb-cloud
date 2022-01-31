@@ -1528,11 +1528,13 @@ TEST_P(CloudTest, CheckpointToCloud) {
 
   OpenDB();
 
+/*
   std::set<std::string> filenames = GetSSTFiles(dbname_);
   for (const std::string& f : filenames) {
   }
   std::set<uint64_t> list;
   GetCloudLiveFilesSrc(&list);
+  */
   //ValidateCloudLiveFilesSrcSize();
 
   std::string value;

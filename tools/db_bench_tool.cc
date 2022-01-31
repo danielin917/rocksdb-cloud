@@ -1542,6 +1542,7 @@ static const auto& s3_reg __attribute__((__unused__)) =
 #endif  /* USE_AWS */
 #endif  // ROCKSDB_LITE
 
+/*
 static enum RepFactory StringToRepFactory(const char* ctype) {
   assert(ctype);
 
@@ -1557,8 +1558,9 @@ static enum RepFactory StringToRepFactory(const char* ctype) {
   fprintf(stdout, "Cannot parse memreptable %s\n", ctype);
   return kSkipList;
 }
+*/
 
-static enum RepFactory FLAGS_rep_factory;
+//static enum RepFactory FLAGS_rep_factory;
 DEFINE_string(memtablerep, "skip_list", "");
 DEFINE_int64(hash_bucket_count, 1024 * 1024, "hash bucket count");
 DEFINE_bool(use_plain_table, false, "if use plain table "
