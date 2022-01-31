@@ -17,8 +17,6 @@ namespace ROCKSDB_NAMESPACE {
 Status AzureEnv::NewAzureEnv(Env *env, const CloudEnvOptions& env_options,
                             const std::shared_ptr<Logger>& info_log,
                             CloudEnv** cenv) {
-  std::cout << "New AZ 1" << std::endl;
-  /*
   assert(cenv);
   Status status;
   *cenv = nullptr;
@@ -35,16 +33,12 @@ Status AzureEnv::NewAzureEnv(Env *env, const CloudEnvOptions& env_options,
   if (status.ok()) {
     *cenv = aenv.release();
   }
-  */
   return Status::OK();
 }
 
 Status AzureEnv::NewAzureEnv(Env *env, std::unique_ptr<CloudEnv>* cenv) {
-  std::cout << "New AZ 2" << std::endl;
-  /*
   assert(cenv);
   cenv->reset(new AzureEnv(env, CloudEnvOptions()));
-  */
   return Status::OK();
 }
 
