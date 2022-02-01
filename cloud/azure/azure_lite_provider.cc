@@ -38,8 +38,13 @@ namespace ROCKSDB_NAMESPACE {
 
 class AzureClient {
  public:
+  AzureClient(Logger *logger) :
+    logger_(logger) {
+  }
+
   static const char* kAzure() { return "azure"; }
-  static Status Create(const CloudEnvOptions& cloud_opts,
+  static Status Create(Logger *logger,
+                       const CloudEnvOptions& cloud_opts,
                        std::shared_ptr<AzureClient>* result);
   virtual ~AzureClient() { }
   virtual Status CreateContainer(const std::string& container) = 0;
@@ -73,6 +78,9 @@ class AzureClient {
   virtual Status ReadBlobChunk(const std::string& container,
                                const std::string& blob, uint64_t offset,
                                uint64_t size, char *data, uint64_t *read) = 0;
+
+  protected:
+    Logger *logger_;
 };
 
 #ifdef USE_AZURE
@@ -104,8 +112,10 @@ class AzureBlobClient : public AzureClient {
 
  public:
   AzureBlobClient(
+      Logger *logger,
       const std::shared_ptr<azure::storage_lite::blob_client>& client)
-      : blob_client_(client) {
+      : AzureClient(logger),
+        blob_client_(client) {
   }
 
   Status CreateContainer(const std::string& container) override {
@@ -269,8 +279,9 @@ class AzureWrappedClient : public AzureBlobClient {
 
  public:
   AzureWrappedClient(
+      Logger *logger,
       const std::shared_ptr<azure::storage_lite::blob_client>& client)
-    : AzureBlobClient(client) {
+    : AzureBlobClient(logger, client) {
     blob_client_wrapper_ = std::make_shared<azure::storage_lite::blob_client_wrapper>(client);
   }
   
@@ -344,14 +355,16 @@ class AzureWrappedClient : public AzureBlobClient {
 };
 #endif // USE_AZURE
 
-Status AzureClient::Create(const CloudEnvOptions& cloud_opts, std::shared_ptr<AzureClient>* client) {
+Status AzureClient::Create(Logger *logger, const CloudEnvOptions& cloud_opts, std::shared_ptr<AzureClient>* client) {
 #ifdef USE_AZURE
   //std::string user = getenv("AZURE_USER_NAME");
   //std::string key  = getenv("AZURE_ACCESS_KEY");
   const AzureCloudAccessCredentials& cloud_credentials = cloud_opts.azure_credentials;
   std::string account_name = cloud_credentials.account_name;
   std::string account_key = cloud_credentials.account_key;
-  std::cout << account_name << " " << account_key << std::endl;
+  Log(InfoLogLevel::ERROR_LEVEL, logger,
+          "AZURE ACCOUNT [%s] [%s]", account_name.c_str(),
+          account_key.c_str());
   
   auto azure_cred = std::make_shared<azure::storage_lite::shared_key_credential>(account_name, account_key);
   auto account =
@@ -359,9 +372,9 @@ Status AzureClient::Create(const CloudEnvOptions& cloud_opts, std::shared_ptr<Az
       account_name, azure_cred, cloud_credentials.use_https, cloud_credentials.blob_endpoint);
   auto blob_client = std::make_shared<azure::storage_lite::blob_client>(account, 16);
   if (cloud_opts.use_aws_transfer_manager || true) {
-    client->reset(new AzureBlobClient(blob_client));
+    client->reset(new AzureBlobClient(logger, blob_client));
   } else {
-    client->reset(new AzureWrappedClient(blob_client));
+    client->reset(new AzureWrappedClient(logger, blob_client));
   }
   return Status::OK();
 #else
@@ -493,7 +506,7 @@ class AzureStorageProvider : public CloudStorageProviderImpl {
 Status AzureStorageProvider::PrepareOptions(const ConfigOptions& options) {
   auto cenv = static_cast<CloudEnv*>(options.env);
   const CloudEnvOptions& cloud_opts = cenv->GetCloudEnvOptions();
-  Status s = AzureClient::Create(cloud_opts, &azure_client_);
+  Status s = AzureClient::Create(cenv->GetLogger(), cloud_opts, &azure_client_);
   Header(cenv->GetLogger(), "Azure connection to endpoint");
   if (s.ok()) {
     s = CloudStorageProviderImpl::PrepareOptions(options);
