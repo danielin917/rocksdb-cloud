@@ -63,28 +63,28 @@ class AzureCloudAccessCredentials {
   AzureCloudAccessCredentials() {
     char *const _account_name = getenv("AZURE_ACCOUNT");
     if (!_account_name) {
-      std::cout << "No account name registered" << std::endl;
+      //std::cout << "No account name registered" << std::endl;
       FillDefaults();
       return;
     }
 
     char *const _account_key = getenv("AZURE_ACCOUNT_KEY");
     if (!_account_key) {
-      std::cout << "No account key registered" << std::endl;
+      //std::cout << "No account key registered" << std::endl;
       FillDefaults();
       return;
     }
 
     char *const _blob_endpoint = getenv("AZURE_BLOB_ENDPOINT");
     if (!_blob_endpoint) {
-      std::cout << "No blob endpoint registered" << std::endl;
+      //std::cout << "No blob endpoint registered" << std::endl;
       FillDefaults();
       return;
     }
 
     char *const _use_https = getenv("USE_HTTPS");
     if (!_use_https) {
-      std::cout << "HTTP settings not found using https" << std::endl;
+      //std::cout << "HTTP settings not found using https" << std::endl;
       use_https = true;
     }
     use_https = std::string(_use_https) == "https";
@@ -99,9 +99,9 @@ class AzureCloudAccessCredentials {
     blob_endpoint = "127.0.0.1:10000/devstoreaccount1" ;
   }
 
-  std::string account_name;// = "devstoreaccount1";
-  std::string account_key;// = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
-  std::string blob_endpoint;// = "127.0.0.1:10000/devstoreaccount1" ;
+  std::string account_name = "devstoreaccount1";
+  std::string account_key = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+  std::string blob_endpoint = "127.0.0.1:10000/devstoreaccount1" ;
   bool use_https{true};
 };
 
