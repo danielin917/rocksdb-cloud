@@ -61,6 +61,8 @@ enum class AwsAccessType {
 class AzureCloudAccessCredentials {
  public:
   AzureCloudAccessCredentials() {
+      FillDefaults();
+      /*
     char *const _account_name = getenv("AZURE_ACCOUNT");
     if (!_account_name) {
       //std::cout << "No account name registered" << std::endl;
@@ -91,6 +93,7 @@ class AzureCloudAccessCredentials {
     account_name = std::string(_account_name);
     account_key = std::string(_account_key);
     blob_endpoint = std::string(_blob_endpoint);
+    */
   }
 
   void FillDefaults() {
@@ -99,9 +102,9 @@ class AzureCloudAccessCredentials {
     blob_endpoint = "127.0.0.1:10000/devstoreaccount1" ;
   }
 
-  std::string account_name = "devstoreaccount1";
-  std::string account_key = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
-  std::string blob_endpoint = "127.0.0.1:10000/devstoreaccount1" ;
+  std::string account_name; // = "devstoreaccount1";
+  std::string account_key; // = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+  std::string blob_endpoint; // = "127.0.0.1:10000/devstoreaccount1" ;
   bool use_https{true};
 };
 
