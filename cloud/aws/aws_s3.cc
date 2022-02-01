@@ -1009,5 +1009,7 @@ Status CloudStorageProviderImpl::CreateS3Provider(
   return Status::OK();
 #endif /* USE_AWS */
 }
+
+
 }  // namespace ROCKSDB_NAMESPACE
 #endif  // ROCKSDB_LITE

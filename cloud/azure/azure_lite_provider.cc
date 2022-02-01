@@ -351,6 +351,7 @@ Status AzureClient::Create(const CloudEnvOptions& cloud_opts, std::shared_ptr<Az
   const AzureCloudAccessCredentials& cloud_credentials = cloud_opts.azure_credentials;
   std::string account_name = cloud_credentials.account_name;
   std::string account_key = cloud_credentials.account_key;
+  std::cout << account_name << " " << account_key << std::endl;
   
   auto azure_cred = std::make_shared<azure::storage_lite::shared_key_credential>(account_name, account_key);
   auto account =
@@ -366,7 +367,7 @@ Status AzureClient::Create(const CloudEnvOptions& cloud_opts, std::shared_ptr<Az
 #else
   (void) cloud_opts;
   client->reset();
-  return Status::NotSupported("In order to use Azure, compile withUSE_AZURE=1");
+  return Status::NotSupported("In order to use Azure, compile with USE_AZURE=1");
 #endif  // USE_AZURE
 }
 #ifdef USE_AZURE
@@ -482,6 +483,7 @@ class AzureStorageProvider : public CloudStorageProviderImpl {
                           const std::string& bucket_name,
                           const std::string& object_path,
                           uint64_t file_size) override;
+
 
  private:
   // The blob client
@@ -604,8 +606,8 @@ Status AzureStorageProvider::DoPutCloudObject(const std::string& local_file,
                                               uint64_t file_size) {
 
   Log(InfoLogLevel::ERROR_LEVEL, env_->GetLogger(),
-      "Azure PUT, localfile=%s; bucket_name=%s; object_path=%s; filesize=%lu",
-      local_file.c_str(), bucket_name.c_str(), object_path.c_str(), file_size);
+      "Azure PUT, localfile=%s; bucket_name=%s; object_path=%s;",
+      local_file.c_str(), bucket_name.c_str(), object_path.c_str());
 
 
   return azure_client_->UploadBlob(local_file, bucket_name, object_path,
@@ -650,5 +652,17 @@ int CloudEnvImpl::RegisterAzureObjects(ObjectLibrary& library,
       });
   count++;
   return count;
+}
+
+Status CloudStorageProviderImpl::CreateAzureProvider(std::unique_ptr<CloudStorageProvider>* provider) {
+#ifndef USE_AZURE
+  provider->reset();
+  return Status::NotSupported(
+      "In order to use AZURE, make sure you're compiling with USE_AZURE=1");
+#else
+  provider->reset(new AzureStorageProvider());
+  return Status::OK();
+#endif /* USE_AZURE */
+
 }
 }  // namespace ROCKSDB_NAMESPACE

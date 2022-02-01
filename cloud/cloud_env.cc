@@ -391,6 +391,7 @@ Status CloudEnv::NewAwsEnv(
     options.dest_bucket.SetObjectPath(dest_cloud_object);
   if (!dest_cloud_region.empty())
     options.dest_bucket.SetRegion(dest_cloud_region);
+
   return NewAwsEnv(base_env, options, logger, cenv);
 }
 

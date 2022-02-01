@@ -233,6 +233,8 @@ Status CloudStorageWritableFileImpl::Sync() {
           stat.ToString().c_str());
     }
   }
+
+
   return stat;
 }
 
